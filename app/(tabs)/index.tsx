@@ -78,7 +78,11 @@ export default function HomeScreen() {
     if (completedTasks > 0 && remainingTasks === 0) {
       style = styles.calendarDone;
       content = <Text style={styles.checkMark}>✓</Text>;
-    } else if (completedTasks > 0 && remainingTasks > 0) {
+    }
+    else if(completedTasks > 0) {
+      style = { backgroundColor: '#90dfadff' };
+    } 
+    else if (remainingTasks == 0) {
       style = { backgroundColor: '#22c55e' };
     }
     return { style, content };
