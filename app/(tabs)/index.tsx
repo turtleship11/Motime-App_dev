@@ -3,7 +3,15 @@ import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 
+// ✅ useRouter를 expo-router에서 가져옵니다.
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext'; 
+
 export default function HomeScreen() {
+  const { user, logout } = useAuth();
+  // ✅ 라우터 객체 선언
+  const router = useRouter();
+
   const [tasks, setTasks] = useState({
     Study: [
       { title: 'Hive projects', done: true },
@@ -108,11 +116,25 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.container, { backgroundColor: '#fff', flexGrow: 1 }]}
       >
         <View style={styles.profileCard}>
-          <Image source={{ uri: 'https://i.pravatar.cc/150' }} style={styles.profileImage} />
-          <View>
-            <Text style={styles.profileName}>Motime User</Text>
-            <Text style={styles.profileQuote}>each task shapes who we become.</Text>
-          </View>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            onPress={() => router.navigate('/(tabs)/profile')}
+          >
+            <Image 
+              source={{ uri: user?.photoURL || 'https://i.pravatar.cc/150' }} 
+              style={styles.profileImage} 
+            />
+            <View>
+              <Text style={styles.profileName}>
+                {user?.displayName || user?.email?.split('@')[0] || 'Motime User'}
+              </Text>
+              <Text style={styles.profileQuote}>each task shapes who we become.</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>로그아웃</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.calendarRow}>
@@ -204,6 +226,8 @@ const styles = StyleSheet.create({
   profileImage: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   profileName: { fontSize: 18, fontWeight: '600' },
   profileQuote: { fontSize: 13, color: '#888' },
+  logoutButton: { padding: 8, backgroundColor: '#fee2e2', borderRadius: 8 },
+  logoutText: { color: '#ef4444', fontSize: 12, fontWeight: '600' },
   calendarRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 },
   calendarItem: { alignItems: 'center' },
   calendarBox: { width: 32, height: 28, borderRadius: 6, backgroundColor: '#ddd', marginBottom: 6, alignItems: 'center', justifyContent: 'center' },
