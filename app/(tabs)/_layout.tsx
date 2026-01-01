@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
-// ✅ 아이콘 라이브러리 직접 임포트
 import { Ionicons } from '@expo/vector-icons'; 
 
 import { Colors } from '@/constants/theme';
@@ -30,7 +29,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          // ✅ Ionicons 사용 (가장 확실함)
+    
           tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
         }}
       />
@@ -38,7 +37,6 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          // ✅ Ionicons 사용
           tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
         }}
       />

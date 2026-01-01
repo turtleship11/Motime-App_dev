@@ -1,17 +1,14 @@
-// services/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA3PtcPL--aPrA6wtpWNFOesamr7H5iCRs",
+  authDomain: "motime-app.firebaseapp.com",
+  projectId: "motime-app",
+  storageBucket: "motime-app.firebasestorage.app",
+  messagingSenderId: "739027816018",
+  appId: "1:739027816018:web:dcb3177139b8fd9330d98b"
 };
 
-// ✅ 핵심 수정: 앱이 이미 초기화되었는지 확인 후 초기화
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-
 export const auth = getAuth(app);

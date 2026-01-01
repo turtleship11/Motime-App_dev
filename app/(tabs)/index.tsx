@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
-  // ✅ 라우터 객체 선언
   const router = useRouter();
 
   const [tasks, setTasks] = useState({

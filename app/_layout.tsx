@@ -17,7 +17,6 @@ function RootLayoutNav() {
 
   if (isLoading) return null;
 
-  // 유저 체크 로직을 여기서 빼야 하단 바(tabs)가 항상 보입니다.
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
