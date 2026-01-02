@@ -1,0 +1,35 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  headerWrapper: { marginTop: 50, paddingHorizontal: 20, alignItems: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '600' },
+  headerSubtitle: { fontSize: 12, color: '#777' },
+  container: { padding: 20, flexGrow: 1 },
+  profileCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  profileImage: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
+  profileName: { fontSize: 18, fontWeight: '600' },
+  profileQuote: { fontSize: 13, color: '#888' },
+
+  authButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  authButtonText: { fontSize: 12, fontWeight: '700' },
+  logoutVariant: { backgroundColor: '#fee2e2' },
+  logoutText: { color: '#ef4444' },
+  loginVariant: { backgroundColor: '#e0f2fe' },
+  loginText: { color: '#0284c7' },
+
+  categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
+  categoryTitle: { fontSize: 16, fontWeight: '600' },
+  categoryInput: { fontSize: 16, fontWeight: '600', borderBottomWidth: 1, borderColor: '#515151', minWidth: 100 },
+  addCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' },
+  addPlus: { fontSize: 20 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: '#aaa', marginRight: 10 },
+  checkboxDone: { backgroundColor: '#3b82f6', borderColor: '#3b82f6' },
+  taskText: { fontSize: 14 },
+  taskDone: { textDecorationLine: 'line-through', color: '#999' },
+  taskInput: { fontSize: 14, borderBottomWidth: 1, flex: 1, borderColor: '#515151' },
+  addTaskRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
+  input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 10, height: 40 },
+  addTaskButton: { marginLeft: 10, backgroundColor: '#515151', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  addButtonText: { color: '#fff', fontSize: 14 },
+});
