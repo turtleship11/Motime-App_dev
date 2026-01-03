@@ -1,15 +1,23 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import LoginScreen from '../LoginScreen'; // LoginScreen import
+import LoginScreen from '../LoginScreen';
+
+import * as ImagePicker from 'expo-image-picker';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/firebase/firebase';
 
 export default function ProfileScreen() {
   const { user, logout, isLoading } = useAuth();
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(user?.photoURL || null);
+  const storage = getStorage();
 
-  // 초기 로딩 중이면 아무 것도 안 보여줌
+  // 초기 로딩
   if (isLoading) return null;
 
-  // 로그인 안 된 경우 LoginScreen 렌더링 (탭 바 유지)
+  // 로그인 안 된 경우
   if (!user) {
     return (
       <View style={{ flex: 1 }}>
@@ -18,26 +26,79 @@ export default function ProfileScreen() {
     );
   }
 
-  // 로그인 된 경우 프로필 화면
+  // 📸 사진 선택 + 업로드 (웹 / 모바일)
+  const pickAndUploadImage = async () => {
+    try {
+      // 🌐 WEB
+      if (Platform.OS === 'web') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        input.onchange = async () => {
+          if (!input.files || !input.files[0]) return;
+          const file = input.files[0];
+          const storageRef = ref(storage, `Profile_photo/${user.uid}`);
+
+          await uploadBytes(storageRef, file);
+
+          const downloadURL = await getDownloadURL(storageRef);
+          setProfilePhoto(downloadURL); // 즉시 UI 반영
+          await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+
+          Alert.alert('Profile photo updated!');
+        };
+
+        input.click();
+        return;
+      }
+
+      // 📱 MOBILE (iOS / Android)
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission required');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5, // 이미지 압축
+      });
+
+      if (result.canceled) return;
+
+      const uri = result.assets[0].uri;
+      const response = await fetch(uri);
+      const blob = await response.blob(); 
+
+      const storageRef = ref(storage, `Profile_photo/${user.uid}`);
+      await uploadBytes(storageRef, blob);
+
+      const downloadURL = await getDownloadURL(storageRef);
+      setProfilePhoto(downloadURL); // 즉시 UI 반영
+      await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+
+      Alert.alert('Profile photo updated!');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Upload failed');
+    }
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#fff', dark: '#000' }}
       headerImage={
-        <View
-          style={{
-           width: '100%',
-            height: 100,          // 헤더 전체 높이 지정
-            alignItems: 'center',
-            justifyContent: 'flex-end', // 이미지 + 텍스트 하단 정렬
-            paddingBottom: 0,
-          }}
-        >
-          {/* 프로필 사진 */}
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/150?img=3' }} // 임시 이미지
-            style={{ width: 80, height: 80, borderRadius: 60 }}
-            resizeMode="cover"
-          />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={pickAndUploadImage}>
+            <Image
+              source={{ uri: profilePhoto || 'https://i.pravatar.cc/150' }}
+              style={styles.profileImage}
+            />
+            <Text style={styles.changeText}>Tap to change photo</Text>
+          </TouchableOpacity>
         </View>
       }
     >
@@ -47,13 +108,7 @@ export default function ProfileScreen() {
           <Text style={styles.value}>{user.email}</Text>
         </View>
 
-        {/* 로그아웃 버튼 */}
-        <TouchableOpacity
-          onPress={async () => {
-            await logout(); // 로그아웃 후 user=null → 자동으로 LoginScreen 렌더링
-          }}
-          style={styles.logoutButton}
-        >
+        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
           <Text style={styles.logoutText}>로그아웃</Text>
         </TouchableOpacity>
       </View>
@@ -62,6 +117,24 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    width: '100%',
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  changeText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
   infoBox: {
     backgroundColor: '#f9f9f9',
     padding: 20,
