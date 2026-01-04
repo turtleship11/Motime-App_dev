@@ -1,89 +1,116 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
-import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform, TextInput } from 'react-native';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import LoginScreen from '../LoginScreen';
+import SignupPage from '../SignupPage';
 
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
 import { db } from '@/firebase/firebase';
 
 export default function ProfileScreen() {
-  const { user, logout, isLoading } = useAuth();
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(user?.photoURL || null);
+  const { user, logout, isLoading, refreshUser } = useAuth();
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profileQuote, setProfileQuote] = useState<string>('');
+  const [editingQuote, setEditingQuote] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  
   const storage = getStorage();
 
-  // 초기 로딩
+  // 🔄 user 변경 시 프로필 사진 동기화
+  useEffect(() => {
+    setProfilePhoto(user?.photoURL || null);
+
+    // Firestore에서 profileQuote 가져오기
+    const fetchQuote = async () => {
+      if (!user) return;
+      const docSnap = await getDoc(doc(db, 'users', user.uid));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfileQuote(data.profileQuote || '');
+      }
+    };
+    fetchQuote();
+  }, [user]);
+
   if (isLoading) return null;
-
-  // 로그인 안 된 경우
   if (!user) {
-    return (
-      <View style={{ flex: 1 }}>
-        <LoginScreen />
-      </View>
-    );
-  }
+  return mode === 'login' ? (
+    <LoginScreen onSignup={() => setMode('signup')} />
+  ) : (
+    <SignupPage onBack={() => setMode('login')} />
+  );
+}
 
-  // 📸 사진 선택 + 업로드 (웹 / 모바일)
+  // 📸 사진 선택 + 업로드
   const pickAndUploadImage = async () => {
     try {
-      // 🌐 WEB
+      // WEB
       if (Platform.OS === 'web') {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-
         input.onchange = async () => {
           if (!input.files || !input.files[0]) return;
           const file = input.files[0];
           const storageRef = ref(storage, `Profile_photo/${user.uid}`);
-
           await uploadBytes(storageRef, file);
-
           const downloadURL = await getDownloadURL(storageRef);
-          setProfilePhoto(downloadURL); // 즉시 UI 반영
+          setProfilePhoto(downloadURL);
+          await updateProfile(user, { photoURL: downloadURL });
           await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
-
+          await refreshUser();
           Alert.alert('Profile photo updated!');
         };
-
         input.click();
         return;
       }
 
-      // 📱 MOBILE (iOS / Android)
+      // MOBILE
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert('Permission required');
-        return;
-      }
+      if (!permission.granted) return Alert.alert('Permission required');
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5, // 이미지 압축
+        quality: 0.5,
       });
 
       if (result.canceled) return;
-
       const uri = result.assets[0].uri;
       const response = await fetch(uri);
-      const blob = await response.blob(); 
-
+      const blob = await response.blob();
       const storageRef = ref(storage, `Profile_photo/${user.uid}`);
       await uploadBytes(storageRef, blob);
-
       const downloadURL = await getDownloadURL(storageRef);
-      setProfilePhoto(downloadURL); // 즉시 UI 반영
-      await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
 
+      setProfilePhoto(downloadURL);
+      await updateProfile(user, { photoURL: downloadURL });
+      await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+      await refreshUser();
       Alert.alert('Profile photo updated!');
     } catch (error) {
       console.error(error);
       Alert.alert('Upload failed');
+    }
+  };
+
+  // 📌 profileQuote 저장
+  const saveQuote = async () => {
+    setEditingQuote(false);
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', user.uid), { profileQuote }, { merge: true });
+      
+      Alert.alert('Quote updated!');
+      setEditingQuote(false);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Failed to update quote');
     }
   };
 
@@ -106,6 +133,29 @@ export default function ProfileScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.label}>현재 로그인 계정</Text>
           <Text style={styles.value}>{user.email}</Text>
+        </View>
+
+        {/* 프로필 문구 편집 */}
+        <View style={[styles.infoBox, { flexDirection: 'row', alignItems: 'center' }]}>
+          {editingQuote ? (
+            <>
+              <TextInput
+                style={[styles.value, { flex: 1, borderBottomWidth: 1, borderColor: '#ccc' }]}
+                value={profileQuote}
+                onChangeText={setProfileQuote}
+              />
+              <TouchableOpacity onPress={saveQuote} style={{ marginLeft: 12 }}>
+                <Text style={{ color: '#10b981', fontWeight: 'bold' }}>Save</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.value, { flex: 1 }]}>{profileQuote || 'Tap to set your quote'}</Text>
+              <TouchableOpacity onPress={() => setEditingQuote(true)} style={{ marginLeft: 12 }}>
+                <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>Edit</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         <TouchableOpacity onPress={logout} style={styles.logoutButton}>

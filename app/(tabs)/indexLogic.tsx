@@ -40,15 +40,27 @@ export function useHomeLogic(user: any, logout: any) {
   const [editingTask, setEditingTask] = useState<{ category: string; index: number } | null>(null);
   const [taskTextInput, setTaskTextInput] = useState<string>('');
 
+  // ✅ 새로 추가: Profile 관련 상태
+  const [profileQuote, setProfileQuote] = useState<string>('each task shapes who we become.');
+  const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL || null);
+
   /* =======================
      Firebase Real-time Sync
   ======================= */
   useEffect(() => {
     if (!user) return;
-    else if(user)
-        console.log("파이어베이스에 등록된 내 사진 주소:", user.photoURL);
 
-    // 1. 전체 날짜 요약 감시
+    // 1. Profile info 구독
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfileQuote(data.profileQuote || 'each task shapes who we become.');
+        setPhotoURL(data.photoURL || null);
+      }
+    });
+
+    // 2. 전체 날짜 요약 감시
     const daysCollectionRef = collection(db, "users", user.uid, "days");
     const unsubscribeAll = onSnapshot(daysCollectionRef, (querySnapshot) => {
       const newSummary: Record<string, DaySummary> = {};
@@ -62,7 +74,7 @@ export function useHomeLogic(user: any, logout: any) {
       setWeekTasksSummary(newSummary);
     });
 
-    // 2. 선택된 날짜 상세 데이터 감시
+    // 3. 선택된 날짜 상세 데이터 감시
     const dateStr = selectedDate.toLocaleDateString("en-CA");
     const docRef = doc(db, "users", user.uid, "days", dateStr);
     const unsubscribeDetail = onSnapshot(docRef, (snap) => {
@@ -77,6 +89,7 @@ export function useHomeLogic(user: any, logout: any) {
     });
 
     return () => {
+      unsubscribeProfile();
       unsubscribeAll();
       unsubscribeDetail();
     };
@@ -165,6 +178,7 @@ export function useHomeLogic(user: any, logout: any) {
     categoryNameInput, setCategoryNameInput,
     editingTask, setEditingTask,
     taskTextInput, setTaskTextInput,
-    handleAuthAction, toggleTask, addTask, saveTaskText, saveCategoryName
+    handleAuthAction, toggleTask, addTask, saveTaskText, saveCategoryName,
+    profileQuote, photoURL  // ✅ 새로 추가
   };
 }

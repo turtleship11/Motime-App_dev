@@ -22,6 +22,7 @@ export default function HomeScreen() {
     categoryNameInput, setCategoryNameInput,
     editingTask, setEditingTask,
     taskTextInput, setTaskTextInput,
+    profileQuote, photoURL,
     handleAuthAction, toggleTask, addTask, saveTaskText, saveCategoryName
   } = useHomeLogic(user, logout);
 
@@ -42,10 +43,10 @@ export default function HomeScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }} 
             onPress={() => router.navigate('/(tabs)/profile')}
           >
-            <Image source={{ uri: user?.photoURL || 'https://i.pravatar.cc/150' }} style={styles.profileImage} />
+            <Image source={{ uri: photoURL || 'https://i.pravatar.cc/150' }} style={styles.profileImage} />
             <View>
               <Text style={styles.profileName}>{user?.displayName || user?.email?.split('@')[0] || 'Guest'}</Text>
-              <Text style={styles.profileQuote}>{user ? 'each task shapes who we become.' : 'Please login to start.'}</Text>
+              <Text style={styles.profileQuote}>{user ? profileQuote : 'Please login to start.'}</Text>
             </View>
           </TouchableOpacity>
 

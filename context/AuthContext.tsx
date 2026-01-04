@@ -14,6 +14,7 @@ type AuthContextType = {
   signup: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>; // ✅ 추가
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,13 +24,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setIsLoading(false);
-    });
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        setUser(firebaseUser);
+        setIsLoading(false);
+      });
 
-    return unsubscribe;
+      // 구독 해제
+      return unsubscribe;
+    } catch (error) {
+      console.error("Firebase offline or network error", error);
+      setIsLoading(false); // 에러 발생 시 로딩 끝 처리
+    }
   }, []);
+
 
   // ✅ 회원가입
   const signup = async (email: string, password: string) => {
@@ -46,8 +54,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   };
 
+  // 🔥 핵심: Auth user 강제 동기화
+  const refreshUser = async () => {
+    if (!auth.currentUser) return;
+    await auth.currentUser.reload();
+    setUser({ ...auth.currentUser }); // ⭐ 새 객체 → 전 화면 리렌더
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signup, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        signup,
+        login,
+        logout,
+        refreshUser, // ✅ 노출
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
