@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
-import { db } from '@/firebase/firebase'; 
-import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
+import { db } from '@/firebase/firebase';
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  getDoc,
+  getDocs,
+} from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 
-// 타입 정의
+/* =======================
+   Types
+======================= */
 export type Task = { title: string; done: boolean };
 export type Tasks = { [category: string]: Task[] };
 export type DaySummary = { remaining: number; isAllDone: boolean };
@@ -12,6 +21,9 @@ export type DaySummary = { remaining: number; isAllDone: boolean };
 export function useHomeLogic(user: any, logout: any) {
   const router = useRouter();
 
+  /* =======================
+     Defaults
+  ======================= */
   const defaultTasks: Tasks = {
     Study: [
       { title: 'Hive projects', done: false },
@@ -23,7 +35,7 @@ export function useHomeLogic(user: any, logout: any) {
       { title: 'Pull-up', done: false },
     ],
   };
-  const defaultCategories = ['Study', 'Practice'];
+  const defaultCategories = ['Category1', 'Category2'];
 
   /* =======================
      States
@@ -31,7 +43,7 @@ export function useHomeLogic(user: any, logout: any) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<Tasks>(defaultTasks);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
-  const [weekTasksSummary, setWeekTasksSummary] = useState<{ [dateStr: string]: DaySummary }>({});
+  const [weekTasksSummary, setWeekTasksSummary] = useState<Record<string, DaySummary>>({});
 
   const [showInput, setShowInput] = useState<string | null>(null);
   const [newTask, setNewTask] = useState<string>('');
@@ -40,9 +52,55 @@ export function useHomeLogic(user: any, logout: any) {
   const [editingTask, setEditingTask] = useState<{ category: string; index: number } | null>(null);
   const [taskTextInput, setTaskTextInput] = useState<string>('');
 
-  // ✅ 새로 추가: Profile 관련 상태
+  // Profile
   const [profileQuote, setProfileQuote] = useState<string>('each task shapes who we become.');
   const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL || null);
+
+  // Daily Quote
+  const [dailyQuote, setDailyQuote] = useState<{ text: string; author: string } | null>(null);
+
+  /* =======================
+     Daily Quote Logic
+  ======================= */
+  const getDailyQuote = async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const dailyDocId = `${user.uid}_${today}`;
+      const dailyRef = doc(db, 'dailyQuotes', dailyDocId);
+
+      // 1️⃣ 오늘의 dailyQuote가 이미 존재하는지 확인
+      const snap = await getDoc(dailyRef);
+      if (snap.exists()) {
+        setDailyQuote(snap.data() as any);
+        return;
+      }
+
+      // 2️⃣ quotes 컬렉션에서 랜덤 명언 가져오기
+      const quotesSnap = await getDocs(collection(db, 'quote'));
+      const quotes = quotesSnap.docs.map(doc => doc.data()) as { text: string; author: string }[];
+
+      if (quotes.length === 0) return;
+
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+      const dailyData = {
+        userId: user.uid,
+        date: today,
+        text: randomQuote.text,
+        author: randomQuote.author,
+      };
+
+      // 3️⃣ dailyQuotes에 저장
+      await setDoc(dailyRef, dailyData);
+
+      // 4️⃣ 상태 업데이트
+      setDailyQuote(dailyData);
+
+    } catch (error) {
+      console.error('Error fetching daily quote:', error);
+    }
+  };
 
   /* =======================
      Firebase Real-time Sync
@@ -50,33 +108,36 @@ export function useHomeLogic(user: any, logout: any) {
   useEffect(() => {
     if (!user) return;
 
-    // 1. Profile info 구독
+    getDailyQuote();
+
+    // 🔹 Profile info
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // 기존 user.photoURL fallback 처리
+        setPhotoURL(data.photoURL || user.photoURL || null);
         setProfileQuote(data.profileQuote || 'each task shapes who we become.');
-        setPhotoURL(data.photoURL || null);
       }
     });
 
-    // 2. 전체 날짜 요약 감시
-    const daysCollectionRef = collection(db, "users", user.uid, "days");
+    // 🔹 Week summary
+    const daysCollectionRef = collection(db, 'users', user.uid, 'days');
     const unsubscribeAll = onSnapshot(daysCollectionRef, (querySnapshot) => {
       const newSummary: Record<string, DaySummary> = {};
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const allTasks = Object.values(data.tasks || {}).flat() as Task[];
-        const remaining = allTasks.filter((t) => !t.done).length;
+        const remaining = allTasks.filter(t => !t.done).length;
         const isAllDone = allTasks.length > 0 && remaining === 0;
         newSummary[doc.id] = { remaining, isAllDone };
       });
       setWeekTasksSummary(newSummary);
     });
 
-    // 3. 선택된 날짜 상세 데이터 감시
-    const dateStr = selectedDate.toLocaleDateString("en-CA");
-    const docRef = doc(db, "users", user.uid, "days", dateStr);
+    // 🔹 Selected date detail
+    const dateStr = selectedDate.toLocaleDateString('en-CA');
+    const docRef = doc(db, 'users', user.uid, 'days', dateStr);
     const unsubscribeDetail = onSnapshot(docRef, (snap) => {
       if (!snap.exists()) {
         setTasks(defaultTasks);
@@ -88,6 +149,7 @@ export function useHomeLogic(user: any, logout: any) {
       setCategories(data.categories || defaultCategories);
     });
 
+    // 🔹 Cleanup
     return () => {
       unsubscribeProfile();
       unsubscribeAll();
@@ -96,29 +158,27 @@ export function useHomeLogic(user: any, logout: any) {
   }, [user, selectedDate]);
 
   /* =======================
-     Helper Functions
+     Helpers
   ======================= */
   const saveToFirebase = async (newTasks: Tasks, newCategories: string[]) => {
     if (!user) return;
     const dateStr = selectedDate.toLocaleDateString('en-CA');
     const docRef = doc(db, 'users', user.uid, 'days', dateStr);
-    try {
-      await setDoc(docRef, { tasks: newTasks, categories: newCategories }, { merge: true });
-    } catch (e) {
-      console.error("Firebase save error:", e);
-    }
+    await setDoc(docRef, { tasks: newTasks, categories: newCategories });
   };
 
   const handleAuthAction = async () => {
     if (user) {
-      const confirmLogout = Platform.OS === 'web'
-        ? window.confirm("Are you sure you want to logout?")
-        : await new Promise<boolean>((resolve) =>
-            Alert.alert("Logout", "Are you sure you want to logout?", [
-              { text: "Cancel", onPress: () => resolve(false) },
-              { text: "Logout", onPress: () => resolve(true) }
-            ])
-          );
+      const confirmLogout =
+        Platform.OS === 'web'
+          ? window.confirm('Are you sure you want to logout?')
+          : await new Promise<boolean>((resolve) =>
+              Alert.alert('Logout', 'Are you sure you want to logout?', [
+                { text: 'Cancel', onPress: () => resolve(false) },
+                { text: 'Logout', onPress: () => resolve(true) },
+              ])
+            );
+
       if (confirmLogout) {
         await logout();
         setWeekTasksSummary({});
@@ -138,7 +198,10 @@ export function useHomeLogic(user: any, logout: any) {
 
   const addTask = (category: string) => {
     if (!newTask.trim()) return;
-    const newTasks = { ...tasks, [category]: [...(tasks[category] || []), { title: newTask, done: false }] };
+    const newTasks = {
+      ...tasks,
+      [category]: [...(tasks[category] || []), { title: newTask, done: false }],
+    };
     setTasks(newTasks);
     saveToFirebase(newTasks, categories);
     setNewTask('');
@@ -147,7 +210,10 @@ export function useHomeLogic(user: any, logout: any) {
 
   const saveTaskText = (category: string, index: number) => {
     const newText = taskTextInput.trim();
-    if (!newText) { setEditingTask(null); return; }
+    if (!newText) {
+      setEditingTask(null);
+      return;
+    }
     const updated = [...tasks[category]];
     updated[index] = { ...updated[index], title: newText };
     const newTasks = { ...tasks, [category]: updated };
@@ -155,13 +221,28 @@ export function useHomeLogic(user: any, logout: any) {
     saveToFirebase(newTasks, categories);
     setEditingTask(null);
   };
+  // Task 삭제
+  const deleteTask = (category: string, index: number) => {
+    if (!tasks[category]) return;
+    const updated = [...tasks[category]];
+    updated.splice(index, 1); // 해당 인덱스 제거
+    const newTasks = { ...tasks, [category]: updated };
+    setTasks(newTasks);
+    saveToFirebase(newTasks, categories);
+  };
 
   const saveCategoryName = (oldName: string) => {
     const newName = categoryNameInput.trim();
-    if (!newName || oldName === newName) { setEditingCategory(null); return; }
+    if (!newName || oldName === newName) {
+      setEditingCategory(null);
+      return;
+    }
     const newTasks = { ...tasks };
-    newTasks[newName] = newTasks[oldName] || [];
+
+    // 1️⃣ tasks 배열은 그대로, key 이름만 바꾸기
+    newTasks[newName] = newTasks[oldName];
     delete newTasks[oldName];
+
     const newCats = categories.map(c => (c === oldName ? newName : c));
     setTasks(newTasks);
     setCategories(newCats);
@@ -169,6 +250,9 @@ export function useHomeLogic(user: any, logout: any) {
     setEditingCategory(null);
   };
 
+  /* =======================
+     Return
+  ======================= */
   return {
     selectedDate, setSelectedDate,
     tasks, categories, weekTasksSummary,
@@ -179,6 +263,7 @@ export function useHomeLogic(user: any, logout: any) {
     editingTask, setEditingTask,
     taskTextInput, setTaskTextInput,
     handleAuthAction, toggleTask, addTask, saveTaskText, saveCategoryName,
-    profileQuote, photoURL  // ✅ 새로 추가
+    profileQuote, photoURL,
+    dailyQuote,deleteTask,
   };
 }

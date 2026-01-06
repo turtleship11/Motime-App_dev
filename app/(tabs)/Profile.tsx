@@ -1,4 +1,13 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Platform, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -17,14 +26,13 @@ export default function ProfileScreen() {
   const [profileQuote, setProfileQuote] = useState<string>('');
   const [editingQuote, setEditingQuote] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
-  
+
   const storage = getStorage();
 
-  // 🔄 user 변경 시 프로필 사진 동기화
+  // 🔄 user 변경 시 프로필 정보 동기화
   useEffect(() => {
     setProfilePhoto(user?.photoURL || null);
 
-    // Firestore에서 profileQuote 가져오기
     const fetchQuote = async () => {
       if (!user) return;
       const docSnap = await getDoc(doc(db, 'users', user.uid));
@@ -33,17 +41,22 @@ export default function ProfileScreen() {
         setProfileQuote(data.profileQuote || '');
       }
     };
+
     fetchQuote();
   }, [user]);
 
   if (isLoading) return null;
+
   if (!user) {
-  return mode === 'login' ? (
-    <LoginScreen onSignup={() => setMode('signup')} />
-  ) : (
-    <SignupPage onBack={() => setMode('login')} />
-  );
-}
+    return mode === 'login' ? (
+      <LoginScreen onSignup={() => setMode('signup')} />
+    ) : (
+      <SignupPage onBack={() => setMode('login')} />
+    );
+  }
+
+  const displayName =
+    user.displayName || user.email?.split('@')[0] || 'User';
 
   // 📸 사진 선택 + 업로드
   const pickAndUploadImage = async () => {
@@ -59,9 +72,14 @@ export default function ProfileScreen() {
           const storageRef = ref(storage, `Profile_photo/${user.uid}`);
           await uploadBytes(storageRef, file);
           const downloadURL = await getDownloadURL(storageRef);
+
           setProfilePhoto(downloadURL);
           await updateProfile(user, { photoURL: downloadURL });
-          await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+          await setDoc(
+            doc(db, 'users', user.uid),
+            { photoURL: downloadURL },
+            { merge: true }
+          );
           await refreshUser();
           Alert.alert('Profile photo updated!');
         };
@@ -70,8 +88,10 @@ export default function ProfileScreen() {
       }
 
       // MOBILE
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) return Alert.alert('Permission required');
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted)
+        return Alert.alert('Permission required');
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -81,16 +101,22 @@ export default function ProfileScreen() {
       });
 
       if (result.canceled) return;
+
       const uri = result.assets[0].uri;
       const response = await fetch(uri);
       const blob = await response.blob();
+
       const storageRef = ref(storage, `Profile_photo/${user.uid}`);
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
 
       setProfilePhoto(downloadURL);
       await updateProfile(user, { photoURL: downloadURL });
-      await setDoc(doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+      await setDoc(
+        doc(db, 'users', user.uid),
+        { photoURL: downloadURL },
+        { merge: true }
+      );
       await refreshUser();
       Alert.alert('Profile photo updated!');
     } catch (error) {
@@ -101,13 +127,15 @@ export default function ProfileScreen() {
 
   // 📌 profileQuote 저장
   const saveQuote = async () => {
-    setEditingQuote(false);
     if (!user) return;
     try {
-      await setDoc(doc(db, 'users', user.uid), { profileQuote }, { merge: true });
-      
-      Alert.alert('Quote updated!');
+      await setDoc(
+        doc(db, 'users', user.uid),
+        { profileQuote },
+        { merge: true }
+      );
       setEditingQuote(false);
+      Alert.alert('Quote updated!');
     } catch (error) {
       console.error(error);
       Alert.alert('Failed to update quote');
@@ -119,6 +147,15 @@ export default function ProfileScreen() {
       headerBackgroundColor={{ light: '#fff', dark: '#000' }}
       headerImage={
         <View style={styles.header}>
+          <Text style={styles.headerTitle}>
+            {displayName}&apos;s Profile
+          </Text>
+        </View>
+      }
+    >
+      <View style={{ padding: 24 }}>
+        {/* 🔹 프로필 사진 (헤더 아님) */}
+        <View style={styles.profileSection}>
           <TouchableOpacity onPress={pickAndUploadImage}>
             <Image
               source={{ uri: profilePhoto || 'https://i.pravatar.cc/150' }}
@@ -127,39 +164,54 @@ export default function ProfileScreen() {
             <Text style={styles.changeText}>Tap to change photo</Text>
           </TouchableOpacity>
         </View>
-      }
-    >
-      <View style={{ padding: 24 }}>
+
+        {/* 현재 로그인 계정 */}
         <View style={styles.infoBox}>
-          <Text style={styles.label}>현재 로그인 계정</Text>
+          <Text style={styles.label}>Current Account</Text>
           <Text style={styles.value}>{user.email}</Text>
         </View>
 
         {/* 프로필 문구 편집 */}
-        <View style={[styles.infoBox, { flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={styles.infoBox}>
+          <Text style={styles.label}>Profile Quote</Text>
+
           {editingQuote ? (
-            <>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
-                style={[styles.value, { flex: 1, borderBottomWidth: 1, borderColor: '#ccc' }]}
+                style={[
+                  styles.value,
+                  { flex: 1, borderBottomWidth: 1, borderColor: '#ccc' },
+                ]}
                 value={profileQuote}
                 onChangeText={setProfileQuote}
               />
               <TouchableOpacity onPress={saveQuote} style={{ marginLeft: 12 }}>
-                <Text style={{ color: '#10b981', fontWeight: 'bold' }}>Save</Text>
+                <Text style={{ color: '#10b981', fontWeight: 'bold' }}>
+                  Save
+                </Text>
               </TouchableOpacity>
-            </>
+            </View>
           ) : (
-            <>
-              <Text style={[styles.value, { flex: 1 }]}>{profileQuote || 'Tap to set your quote'}</Text>
-              <TouchableOpacity onPress={() => setEditingQuote(true)} style={{ marginLeft: 12 }}>
-                <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>Edit</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.value, { flex: 1 }]}>
+                {profileQuote || 'Tap to set your quote'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingQuote(true)}
+                style={{ marginLeft: 12 }}
+              >
+                <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>
+                  Edit
+                </Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
 
+          
+          
         <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>로그아웃</Text>
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </ParallaxScrollView>
@@ -169,18 +221,26 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   header: {
     width: '100%',
-    height: 120,
+    height: 100,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 8,
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  profileSection: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
   },
   changeText: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 12,
     color: '#6b7280',
     textAlign: 'center',
@@ -212,3 +272,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

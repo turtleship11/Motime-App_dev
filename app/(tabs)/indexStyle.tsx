@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  headerWrapper: { marginTop: 50, paddingHorizontal: 20, alignItems: 'center' },
+  headerWrapper: { marginTop: 40, paddingHorizontal: 20, alignItems: 'center' },
   headerTitle: { fontSize: 22, fontWeight: '600' },
   headerSubtitle: { fontSize: 12, color: '#777' },
   container: { padding: 20, flexGrow: 1 },
@@ -16,7 +16,28 @@ export const styles = StyleSheet.create({
   logoutText: { color: '#ef4444' },
   loginVariant: { backgroundColor: '#e0f2fe' },
   loginText: { color: '#0284c7' },
-
+ /* =====================
+     ✅ Daily Quote Styles
+  ====================== */
+  quoteCard: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 16,
+  },
+  quoteText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#333',
+    lineHeight: 20,
+  },
+  quoteAuthor: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+  },
   categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   categoryTitle: { fontSize: 16, fontWeight: '600' },
   categoryInput: { fontSize: 16, fontWeight: '600', borderBottomWidth: 1, borderColor: '#515151', minWidth: 100 },
