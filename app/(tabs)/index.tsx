@@ -215,7 +215,7 @@ export default function HomeScreen() {
                       onPress={() => deleteTask(cat, index)}
                       style={{ paddingHorizontal: 8 }}
                     >
-                      <Text style={{ color: '#ef4444', fontSize: 16 }}>✕</Text>
+                      <Text style={{ color: '#ef4444', fontSize: 16 }}>-</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -245,3 +245,9 @@ export default function HomeScreen() {
     </ParallaxScrollView>
   );
 }
+
+
+//function add(a, b) {
+//   return a + b;
+// }
+// const add = (a, b) => a + b;“add라는 상수에, (a,b)를 받아 a+b를 반환하는 함수를 담았다”

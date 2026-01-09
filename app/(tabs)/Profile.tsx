@@ -30,6 +30,7 @@ export default function ProfileScreen() {
   const storage = getStorage();
 
   // 🔄 user 변경 시 프로필 정보 동기화
+  
   useEffect(() => {
     setProfilePhoto(user?.photoURL || null);
 
@@ -156,13 +157,16 @@ export default function ProfileScreen() {
       <View style={{ padding: 24 }}>
         {/* 🔹 프로필 사진 (헤더 아님) */}
         <View style={styles.profileSection}>
-          <TouchableOpacity onPress={pickAndUploadImage}>
-            <Image
-              source={{ uri: profilePhoto || 'https://i.pravatar.cc/150' }}
-              style={styles.profileImage}
-            />
-            <Text style={styles.changeText}>Tap to change photo</Text>
+          <TouchableOpacity onPress={pickAndUploadImage} style={{ alignItems: 'center' }}>
+            <View style={{ width: 100, alignItems: 'center' }}>
+              <Image
+                source={{ uri: profilePhoto || 'https://i.pravatar.cc/150' }}
+                style={styles.profileImage}
+              />
+              <Text style={styles.changeText}>Tap to change photo</Text>
+            </View>
           </TouchableOpacity>
+
         </View>
 
         {/* 현재 로그인 계정 */}
@@ -241,7 +245,7 @@ const styles = StyleSheet.create({
   },
   changeText: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: 10,
     color: '#6b7280',
     textAlign: 'center',
   },

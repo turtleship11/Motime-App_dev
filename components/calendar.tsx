@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
   },
   pendingBox: {
-    backgroundColor: '#61bf84ff',
+    backgroundColor: '#79dc9eff',
   },
   selectedBox: {
     backgroundColor: '#1bc084ff',
