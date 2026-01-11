@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = async () => {
     if (!auth.currentUser) return;
     await auth.currentUser.reload();
-    setUser({ ...auth.currentUser }); // ⭐ 새 객체 → 전 화면 리렌더
+    setUser(auth.currentUser ); // ⭐ 새 객체 → 전 화면 리렌더
   };
 
   return (

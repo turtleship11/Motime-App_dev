@@ -116,7 +116,7 @@ export function useHomeLogic(user: any, logout: any) {
 
     getDailyQuote();
 
-    // Profile
+    // Profile 구독
     const unsubscribeProfile = onSnapshot(
       doc(db, 'users', user.uid),
       snap => {
@@ -129,7 +129,7 @@ export function useHomeLogic(user: any, logout: any) {
       }
     );
 
-    // Week summary
+    // Week summary 구독
     const unsubscribeAll = onSnapshot(
       collection(db, 'users', user.uid, 'days'),
       qs => {
@@ -147,7 +147,7 @@ export function useHomeLogic(user: any, logout: any) {
       }
     );
 
-    // Selected date
+    // Selected date 구독
     const dateStr = selectedDate.toLocaleDateString('en-CA');
     const docRef = doc(db, 'users', user.uid, 'days', dateStr);
 
@@ -172,12 +172,13 @@ export function useHomeLogic(user: any, logout: any) {
       setCategories(data.categories || defaultCategories);
     });
 
+    // Cleanup 구독 해제
     return () => {
       unsubscribeProfile();
       unsubscribeAll();
       unsubscribeDetail();
     };
-  }, [user, selectedDate]);
+  }, [user, selectedDate]); // ✅ user나 selectedDate가 바뀔 때만 실행
 
   /* =======================
      Helpers
